@@ -1,0 +1,13 @@
+[package]
+name = "rsv"
+version = "0.1.0"
+authors = ["clynamen <clynamen@gmail.com>"]
+
+[dependencies]
+vulkano = "0.10"
+vulkano-shader-derive = "0.10"
+vulkano-win = "0.10"
+cgmath = "0.16"
+image = "0.19"
+winit = "0.17"
+time = "0.1.37"
