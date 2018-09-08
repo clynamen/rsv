@@ -13,6 +13,8 @@ use vulkano::sync::GpuFuture;
 
 use std::sync::Arc;
 
+extern crate rsv;
+use rsv::shaders::*;
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -88,11 +90,11 @@ fn main() {
     let view = cgmath::Matrix4::look_at(cgmath::Point3::new(0.3, 0.3, 1.0), cgmath::Point3::new(0.0, 0.0, 0.0), cgmath::Vector3::new(0.0, -1.0, 0.0));
     let scale = cgmath::Matrix4::from_scale(0.1);
 
-    let uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<vs::ty::Data>
+    let uniform_buffer = vulkano::buffer::cpu_pool::CpuBufferPool::<simple_point_vertex::ty::Data>
                                ::new(device.clone(), vulkano::buffer::BufferUsage::all());
 
-    let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
-    let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
+    let vs = simple_point_vertex::Shader::load(device.clone()).expect("failed to create shader module");
+    let fs = simple_point_fragment::Shader::load(device.clone()).expect("failed to create shader module");
 
     let renderpass = Arc::new(
         single_pass_renderpass!(device.clone(),
@@ -192,7 +194,7 @@ fn main() {
             let rotation = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
             let rotation = cgmath::Matrix3::from_angle_y(cgmath::Rad(rotation as f32));
 
-            let uniform_data = vs::ty::Data {
+            let uniform_data = simple_point_vertex::ty::Data {
                 world : cgmath::Matrix4::from(rotation).into(),
                 view : (view * scale).into(),
                 proj : proj.into(),
@@ -259,46 +261,4 @@ fn main() {
         });
         if done { return; }
     }
-}
-
-mod vs {
-    #[derive(VulkanoShader)]
-    #[ty = "vertex"]
-    #[src = "
-#version 450
-
-layout(location = 0) in vec3 position;
-
-
-layout(set = 0, binding = 0) uniform Data {
-    mat4 world;
-    mat4 view;
-    mat4 proj;
-} uniforms;
-
-void main() {
-    mat4 worldview = uniforms.view * uniforms.world;
-    gl_Position = uniforms.proj * worldview * vec4(position, 1.0);
-    gl_PointSize = 1/gl_Position.z * 2.0 ;
-}
-"]
-    #[allow(dead_code)]
-    struct Dummy;
-}
-
-mod fs {
-    #[derive(VulkanoShader)]
-    #[ty = "fragment"]
-    #[src = "
-#version 450
-
-layout(location = 0) out vec4 f_color;
-
-void main() {
-    vec3 point_color = vec3(1.0, 0.0, 0.0);
-    f_color = vec4(point_color, 1.0);
-}
-"]
-    #[allow(dead_code)]
-    struct Dummy;
 }
