@@ -70,26 +70,20 @@ fn main() {
     let mut depth_buffer = vulkano::image::attachment::AttachmentImage::transient(device.clone(), dimensions, vulkano::format::D16Unorm).unwrap();
 
     let VERTICES = vec![
-        Vertex { position: ( 1.0,  1.0,  0.0) },   
-        Vertex { position: ( 1.0, -1.0,  0.0) },   
-        Vertex { position: (-1.0, -1.0,  0.0) },   
-        Vertex { position: (-1.0,  1.0,  0.0) }
+        Vertex { position: ( 1.0,  1.0, -1.0) },   
+        Vertex { position: ( 1.0, -1.0, -1.0) },   
+        Vertex { position: (-1.0, -1.0, -1.0) },   
+        Vertex { position: (-1.0,  1.0, -1.0) },
+        Vertex { position: ( 1.0,  1.0,  1.0) },   
+        Vertex { position: ( 1.0, -1.0,  1.0) },   
+        Vertex { position: (-1.0, -1.0,  1.0) },   
+        Vertex { position: (-1.0,  1.0,  1.0) }
     ];
 
     let vertex_buffer = vulkano::buffer::cpu_access::CpuAccessibleBuffer
                                 ::from_iter(device.clone(), vulkano::buffer::BufferUsage::all(), VERTICES.iter().cloned())
                                 .expect("failed to create buffer");
 
-    // let normals_buffer = vulkano::buffer::cpu_access::CpuAccessibleBuffer
-    //                             ::from_iter(device.clone(), vulkano::buffer::BufferUsage::all(), examples::NORMALS.iter().cloned())
-    //                             .expect("failed to create buffer");
-
-    // let index_buffer = vulkano::buffer::cpu_access::CpuAccessibleBuffer
-    //                             ::from_iter(device.clone(), vulkano::buffer::BufferUsage::all(), examples::INDICES.iter().cloned())
-    //                             .expect("failed to create buffer");
-
-    // note: this teapot was meant for OpenGL where the origin is at the lower left
-    //       instead the origin is at the upper left in vulkan, so we reverse the Y axis
     let mut proj = cgmath::perspective(cgmath::Rad(std::f32::consts::FRAC_PI_2), { dimensions[0] as f32 / dimensions[1] as f32 }, 0.01, 100.0);
     let view = cgmath::Matrix4::look_at(cgmath::Point3::new(0.3, 0.3, 1.0), cgmath::Point3::new(0.0, 0.0, 0.0), cgmath::Vector3::new(0.0, -1.0, 0.0));
     let scale = cgmath::Matrix4::from_scale(0.1);
@@ -124,7 +118,7 @@ fn main() {
     );
 
     let pipeline = Arc::new(vulkano::pipeline::GraphicsPipeline::start()
-        .vertex_input(vulkano::pipeline::vertex::TwoBuffersDefinition::new())
+        .vertex_input(vulkano::pipeline::vertex::SingleBufferDefinition::new())
         .vertex_shader(vs.main_entry_point(), ())
         .point_list()
         .viewports_dynamic_scissors_irrelevant(1)
@@ -232,7 +226,7 @@ fn main() {
             .draw(
                 pipeline.clone(),
                 &dynamic_state,
-                (vertex_buffer.clone(), vertex_buffer.clone()), 
+                vertex_buffer.clone(), 
                 set.clone(), ()).unwrap()
             .end_render_pass().unwrap()
             .build().unwrap();
@@ -274,9 +268,7 @@ mod vs {
 #version 450
 
 layout(location = 0) in vec3 position;
-// layout(location = 1) in vec3 normal;
 
-// layout(location = 0) out vec3 v_normal;
 
 layout(set = 0, binding = 0) uniform Data {
     mat4 world;
@@ -286,7 +278,6 @@ layout(set = 0, binding = 0) uniform Data {
 
 void main() {
     mat4 worldview = uniforms.view * uniforms.world;
-    // v_normal = transpose(inverse(mat3(worldview))) * normal;
     gl_Position = uniforms.proj * worldview * vec4(position, 1.0);
     gl_PointSize = 1/gl_Position.z * 2.0 ;
 }
