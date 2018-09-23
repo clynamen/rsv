@@ -13,3 +13,9 @@ mod tests {
 
 pub mod shaders;
 pub use shaders::*;
+
+pub mod primitives;
+pub use primitives::*;
+
+pub mod renderer;
+pub use renderer::*;

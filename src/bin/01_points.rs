@@ -14,14 +14,10 @@ use vulkano::sync::GpuFuture;
 use std::sync::Arc;
 
 extern crate rsv;
+
 use rsv::shaders::*;
-
-#[derive(Copy, Clone)]
-pub struct Vertex {
-    position: (f32, f32, f32)
-}
-
-impl_vertex!(Vertex, position);
+use rsv::primitives::*;
+use rsv::renderer::*;
 
 fn main() {
     // The start of this example is exactly the same as `triangle`. You should read the
