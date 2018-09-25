@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::vec;
 use std::f32;
 use std::time;
+use std::ops::Deref;
 
 use self::vulkano_win::VkSurfaceBuild;
 use vulkano::sync::GpuFuture;
@@ -16,31 +17,31 @@ use primitives::*;
 use vulkano::pipeline::*;
 use vulkano::framebuffer::*;
 
-const  VERTICES : Vec<Vertex> = vec![
-            Vertex { position: ( 1.0,  1.0, -1.0) },   
-            Vertex { position: ( 1.0, -1.0, -1.0) },   
-            Vertex { position: (-1.0, -1.0, -1.0) },   
-            Vertex { position: (-1.0,  1.0, -1.0) },
-            Vertex { position: ( 1.0,  1.0,  1.0) },   
-            Vertex { position: ( 1.0, -1.0,  1.0) },   
-            Vertex { position: (-1.0, -1.0,  1.0) },   
-            Vertex { position: (-1.0,  1.0,  1.0) }
-        ];
+// const  VERTICES : Vec<Vertex> = vec![
+//             Vertex { position: ( 1.0,  1.0, -1.0) },   
+//             Vertex { position: ( 1.0, -1.0, -1.0) },   
+//             Vertex { position: (-1.0, -1.0, -1.0) },   
+//             Vertex { position: (-1.0,  1.0, -1.0) },
+//             Vertex { position: ( 1.0,  1.0,  1.0) },   
+//             Vertex { position: ( 1.0, -1.0,  1.0) },   
+//             Vertex { position: (-1.0, -1.0,  1.0) },   
+//             Vertex { position: (-1.0,  1.0,  1.0) }
+//         ];
 
 pub struct InstanceContainer {
     instance : Arc<vulkano::instance::Instance>
 }
 
-pub struct VulkanObjects<'t, T> {
+pub struct VulkanObjects {
     instance : Arc<vulkano::instance::Instance>,
     // physical_dev : vulkano::instance::PhysicalDevice<'t>,
-    queue_family : vulkano::instance::QueueFamily<'t>,
+    // queue_family : vulkano::instance::QueueFamily<'t>,
     device_ext : vulkano::device::DeviceExtensions,
     logical_dev : Arc<vulkano::device::Device>,
     queue : Arc<vulkano::device::Queue>,
     pipeline: Arc<GraphicsPipelineAbstract + Sync + Send>,
-    swapchain: Arc<vulkano::swapchain::Swapchain<T>>,
-    swapchain_images: Vec<Arc<vulkano::image::SwapchainImage<T>>>,
+    swapchain: Arc<vulkano::swapchain::Swapchain<winit::Window>>,
+    swapchain_images: Vec<Arc<vulkano::image::SwapchainImage<winit::Window>>>,
     depth_buffer : Arc<vulkano::image::AttachmentImage<vulkano::format::D16Unorm>>,
     uniform_buffer : vulkano::buffer::cpu_pool::CpuBufferPool<simple_point_vertex::ty::Data>,
     proj : cgmath::Matrix4<f32>,
@@ -54,9 +55,9 @@ pub struct WindowObjects<T> where T : Sync, T: Send {
     surface : Arc<vulkano::swapchain::Surface<T>>
 } 
 
-pub struct Renderer<'t, T> where T : Sync, T: Send {
-    vk : VulkanObjects<'t, T>,
-    win : WindowObjects<T>,
+pub struct Renderer {
+    vk : VulkanObjects,
+    win : WindowObjects<winit::Window>,
     previous_frame: Box<GpuFuture>,
     recreate_swapchain : bool,
     // dimensions : [u32, 2],
@@ -66,16 +67,16 @@ pub struct Renderer<'t, T> where T : Sync, T: Send {
     scale : cgmath::Matrix4<f32>,
 }
 
-impl <'t, T> Renderer<'t, T> where T : Sync, T: Send  {
+impl  Renderer {
 
 
-    fn default<'a : 't> (inst  : &'a Arc<vulkano::instance::Instance>) -> Renderer<'t, winit::Window> {
+    pub fn default() -> Renderer {
         let extensions = vulkano_win::required_extensions();
         let instance = vulkano::instance::Instance::new(None, &extensions, None).expect("failed to create instance");
-        let physical  = vulkano::instance::PhysicalDevice::<'t>::enumerate(inst)
+        let physical  = vulkano::instance::PhysicalDevice::enumerate(&instance)
                                 .next().expect("no device available");
         let mut events_loop = winit::EventsLoop::new();
-        let surface = winit::WindowBuilder::new().build_vk_surface(&events_loop, inst.clone()).unwrap();
+        let surface = winit::WindowBuilder::new().build_vk_surface(&events_loop, instance.clone()).unwrap();
         let mut dimensions;
         let queue_family = physical.queue_families().find(|&q| q.supports_graphics() &&
                                                     surface.is_supported(q).unwrap_or(false))
@@ -192,16 +193,16 @@ impl <'t, T> Renderer<'t, T> where T : Sync, T: Send  {
 
         let mut depth_buffer = vulkano::image::attachment::AttachmentImage::transient(device.clone(), dimensions, vulkano::format::D16Unorm).unwrap();
 
-        // let VERTICES = vec![
-        //     Vertex { position: ( 1.0,  1.0, -1.0) },   
-        //     Vertex { position: ( 1.0, -1.0, -1.0) },   
-        //     Vertex { position: (-1.0, -1.0, -1.0) },   
-        //     Vertex { position: (-1.0,  1.0, -1.0) },
-        //     Vertex { position: ( 1.0,  1.0,  1.0) },   
-        //     Vertex { position: ( 1.0, -1.0,  1.0) },   
-        //     Vertex { position: (-1.0, -1.0,  1.0) },   
-        //     Vertex { position: (-1.0,  1.0,  1.0) }
-        // ];
+        let VERTICES = vec![
+            Vertex { position: ( 1.0,  1.0, -1.0) },   
+            Vertex { position: ( 1.0, -1.0, -1.0) },   
+            Vertex { position: (-1.0, -1.0, -1.0) },   
+            Vertex { position: (-1.0,  1.0, -1.0) },
+            Vertex { position: ( 1.0,  1.0,  1.0) },   
+            Vertex { position: ( 1.0, -1.0,  1.0) },   
+            Vertex { position: (-1.0, -1.0,  1.0) },   
+            Vertex { position: (-1.0,  1.0,  1.0) }
+        ];
 
         let vertex_buffer = vulkano::buffer::cpu_access::CpuAccessibleBuffer
                                     ::from_iter(device.clone(), vulkano::buffer::BufferUsage::all(), VERTICES.iter().cloned())
@@ -253,7 +254,7 @@ impl <'t, T> Renderer<'t, T> where T : Sync, T: Send  {
 
         let mut recreate_swapchain = false;
 
-        let mut previous_frame = Box::new(vulkano::sync::now(device.clone())) as Box<GpuFuture>;
+        let mut previous_frame = Box::new(vulkano::sync::now(device.clone())) as Box<dyn GpuFuture>;
         let rotation_start = time::Instant::now();
 
         let mut dynamic_state = vulkano::command_buffer::DynamicState {
@@ -267,9 +268,9 @@ impl <'t, T> Renderer<'t, T> where T : Sync, T: Send  {
         };
 
         let vulkan_objects = VulkanObjects {
-            instance: inst.clone(),
+            instance: instance.clone(),
             // physical_dev: physical,
-            queue_family: queue_family,
+            // queue_family: queue_family,
             device_ext: device_ext,
             logical_dev: device.clone(),
             queue : queue,
@@ -289,7 +290,7 @@ impl <'t, T> Renderer<'t, T> where T : Sync, T: Send  {
             surface: surface,
         };
 
-        let renderer : Renderer<'t, winit::Window> = Renderer {
+        let renderer : Renderer = Renderer {
             vk : vulkan_objects,
             win : window_objects, 
             previous_frame: previous_frame,
@@ -304,135 +305,161 @@ impl <'t, T> Renderer<'t, T> where T : Sync, T: Send  {
         renderer
     }
 
-    fn draw(&self) {
+    pub fn draw(mut self :  Renderer ) ->  Renderer  {
         self.previous_frame.cleanup_finished();
-        let mut framebuffers: Option<Vec<Arc<vulkano::framebuffer::FramebufferAbstract + Sync + Send>>> = None;
+        // let mut framebuffers: Option<Vec<Arc<vulkano::framebuffer::FramebufferAbstract + Sync + Send>>> = None;
 
-        if self.recreate_swapchain {
+        loop {
+            if self.recreate_swapchain {
 
-            let physical  = vulkano::instance::PhysicalDevice::<'t>::enumerate(&self.vk.instance)
-                                    .next().expect("no device available");
-            let mut dimensions;
-            dimensions = self.win.surface.capabilities(physical)
-                .expect("failed to get surface capabilities")
-                .current_extent.unwrap_or([1024, 768]);
-            
-            let (new_swapchain, new_images) = match self.vk.swapchain.recreate_with_dimension(dimensions) {
+                let physical  = vulkano::instance::PhysicalDevice::enumerate(&self.vk.instance)
+                                        .next().expect("no device available");
+                let mut dimensions;
+                dimensions = self.win.surface.capabilities(physical)
+                    .expect("failed to get surface capabilities")
+                    .current_extent.unwrap_or([1024, 768]);
+                
+                let (new_swapchain, new_images) = match self.vk.swapchain.recreate_with_dimension(dimensions) {
+                    Ok(r) => r,
+                    Err(vulkano::swapchain::SwapchainCreationError::UnsupportedDimensions) => {
+                        // panic!("big error")
+                        break
+                    },
+                    Err(err) => panic!("{:?}", err)
+                };
+
+                self.vk.swapchain = new_swapchain;
+                self.vk.swapchain_images = new_images;
+
+                let depth_buffer  =  vulkano::image::attachment::AttachmentImage::transient(self.vk.logical_dev.clone(), dimensions, vulkano::format::D16Unorm).unwrap();
+                self.vk.depth_buffer = depth_buffer;
+
+                self.vk.framebuffers = None;
+
+                self.vk.proj = cgmath::perspective(cgmath::Rad(f32::consts::FRAC_PI_2), { dimensions[0] as f32 / dimensions[1] as f32 }, 0.01, 100.0);
+
+                self.dynamic_state.viewports = Some(vec![vulkano::pipeline::viewport::Viewport {
+                    origin: [0.0, 0.0],
+                    dimensions: [dimensions[0] as f32, dimensions[1] as f32],
+                    depth_range: 0.0 .. 1.0,
+                }]);
+
+                self.recreate_swapchain = false;
+            }
+
+            if self.vk.framebuffers.is_none() {
+                self.vk.framebuffers = Some(self.vk.swapchain_images.iter().map(|image| {
+                    Arc::new(vulkano::framebuffer::Framebuffer::start(self.vk.renderpass.clone())
+                            .add(image.clone()).unwrap()
+                            .add(self.vk.depth_buffer.clone()).unwrap()
+                            .build().unwrap())  as Arc<FramebufferAbstract + Sync + Send>
+                }).collect::<Vec<_>>());
+            }
+
+            let uniform_buffer_subbuffer = {
+                let elapsed = self.rotation_start.elapsed();
+                let rotation = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
+                let rotation = cgmath::Matrix3::from_angle_y(cgmath::Rad(rotation as f32));
+
+                let uniform_data = simple_point_vertex::ty::Data {
+                    world : cgmath::Matrix4::from(rotation).into(),
+                    view : (self.view * self.scale).into(),
+                    proj : self.vk.proj.into(),
+                };
+
+                self.vk.uniform_buffer.next(uniform_data).unwrap()
+            };
+
+            let set = Arc::new(vulkano::descriptor::descriptor_set::PersistentDescriptorSet::start(self.vk.pipeline.clone(), 0)
+                .add_buffer(uniform_buffer_subbuffer).unwrap()
+                .build().unwrap()
+            );
+
+            let (image_num, acquire_future) = match vulkano::swapchain::acquire_next_image(self.vk.swapchain.clone(),
+                                                                                        None) {
                 Ok(r) => r,
-                Err(vulkano::swapchain::SwapchainCreationError::UnsupportedDimensions) => {
-                    panic!("big error")
+                Err(vulkano::swapchain::AcquireError::OutOfDate) => {
+                    self.recreate_swapchain = true;
+                    break;
+                    // panic!("out of date")
                 },
                 Err(err) => panic!("{:?}", err)
             };
 
-            self.vk.swapchain = new_swapchain;
-            self.vk.swapchain_images = new_images;
+            let VERTICES = vec![
+                Vertex { position: ( 1.0,  1.0, -1.0) },   
+                Vertex { position: ( 1.0, -1.0, -1.0) },   
+                Vertex { position: (-1.0, -1.0, -1.0) },   
+                Vertex { position: (-1.0,  1.0, -1.0) },
+                Vertex { position: ( 1.0,  1.0,  1.0) },   
+                Vertex { position: ( 1.0, -1.0,  1.0) },   
+                Vertex { position: (-1.0, -1.0,  1.0) },   
+                Vertex { position: (-1.0,  1.0,  1.0) }
+            ];
 
-            let depth_buffer  =  vulkano::image::attachment::AttachmentImage::transient(self.vk.logical_dev.clone(), dimensions, vulkano::format::D16Unorm).unwrap();
-            self.vk.depth_buffer = depth_buffer;
+            let vertex_buffer = vulkano::buffer::cpu_access::CpuAccessibleBuffer
+                                        ::from_iter(self.vk.logical_dev.clone(), vulkano::buffer::BufferUsage::all(), VERTICES.iter().cloned())
+                                        .expect("failed to create buffer");
 
-            self.vk.framebuffers = None;
+            let primaryOneTimeSubmit  = vulkano::command_buffer::AutoCommandBufferBuilder::primary_one_time_submit( self.vk.logical_dev.clone(), 
+                    self.vk.queue.family());
 
-            self.vk.proj = cgmath::perspective(cgmath::Rad(f32::consts::FRAC_PI_2), { dimensions[0] as f32 / dimensions[1] as f32 }, 0.01, 100.0);
+            if(self.vk.framebuffers.is_none()) {
+                // println!("framebuffers are none");
+            } else {
+                // println!("framebuffers are not none");
+            }
 
-            self.dynamic_state.viewports = Some(vec![vulkano::pipeline::viewport::Viewport {
-                origin: [0.0, 0.0],
-                dimensions: [dimensions[0] as f32, dimensions[1] as f32],
-                depth_range: 0.0 .. 1.0,
-            }]);
+            let command_buffer = primaryOneTimeSubmit.unwrap()
+                .begin_render_pass(
+                    self.vk.framebuffers.as_ref().unwrap()[image_num].clone(), false,
+                    vec![
+                        [0.0, 0.0, 0.0, 1.0].into(),
+                        1f32.into()
+                    ]).unwrap()
+                .draw(
+                    self.vk.pipeline.clone(),
+                    &self.dynamic_state,
 
-            self.recreate_swapchain = false;
+                    // self.vk.vertex_buffer.clone(), 
+                    vec![vertex_buffer],
+
+                    set.clone(), ()).unwrap()
+                .end_render_pass().unwrap()
+                .build().unwrap();
+            
+            // let prev_frame : GpuFuture  = self.previous_frame.deref();
+            let future = self.previous_frame.join(acquire_future)
+                .then_execute(self.vk.queue.clone(), command_buffer).unwrap()
+                .then_swapchain_present(self.vk.queue.clone(), self.vk.swapchain.clone(), image_num)
+                .then_signal_fence_and_flush();
+
+            match future {
+                Ok(future) => {
+                    self.previous_frame = Box::new(future);
+                }
+                Err(vulkano::sync::FlushError::OutOfDate) => {
+                    self.recreate_swapchain = true;
+                    self.previous_frame = Box::new(vulkano::sync::now(self.vk.logical_dev.clone()));
+                }
+                Err(e) => {
+                    println!("{:?}", e);
+                    self.previous_frame = Box::new(vulkano::sync::now(self.vk.logical_dev.clone()));
+                }
+            }
+
+            let mut done = false;
+            self.win.events_loop.poll_events(|ev| {
+                match ev {
+                    winit::Event::WindowEvent { event: winit::WindowEvent::CloseRequested, .. } => done = true,
+                    _ => ()
+                }
+            });
+
+            break;
         }
-
-        if self.vk.framebuffers.is_none() {
-            self.vk.framebuffers = Some(self.vk.swapchain_images.iter().map(|image| {
-                Arc::new(vulkano::framebuffer::Framebuffer::start(self.vk.renderpass.clone())
-                         .add(image.clone()).unwrap()
-                         .add(self.vk.depth_buffer.clone()).unwrap()
-                         .build().unwrap())  as Arc<FramebufferAbstract + Sync + Send>
-            }).collect::<Vec<_>>());
-        }
-
-        let uniform_buffer_subbuffer = {
-            let elapsed = self.rotation_start.elapsed();
-            let rotation = elapsed.as_secs() as f64 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
-            let rotation = cgmath::Matrix3::from_angle_y(cgmath::Rad(rotation as f32));
-
-            let uniform_data = simple_point_vertex::ty::Data {
-                world : cgmath::Matrix4::from(rotation).into(),
-                view : (self.view * self.scale).into(),
-                proj : self.vk.proj.into(),
-            };
-
-            self.vk.uniform_buffer.next(uniform_data).unwrap()
-        };
-
-        let set = Arc::new(vulkano::descriptor::descriptor_set::PersistentDescriptorSet::start(self.vk.pipeline.clone(), 0)
-            .add_buffer(uniform_buffer_subbuffer).unwrap()
-            .build().unwrap()
-        );
-
-        let (image_num, acquire_future) = match vulkano::swapchain::acquire_next_image(self.vk.swapchain.clone(),
-                                                                                       None) {
-            Ok(r) => r,
-            Err(vulkano::swapchain::AcquireError::OutOfDate) => {
-                self.recreate_swapchain = true;
-                // continue;
-                panic!("out of date")
-            },
-            Err(err) => panic!("{:?}", err)
-        };
-
-        let vertex_buffer = vulkano::buffer::cpu_access::CpuAccessibleBuffer
-                                    ::from_iter(self.vk.logical_dev.clone(), vulkano::buffer::BufferUsage::all(), VERTICES.iter().cloned())
-                                    .expect("failed to create buffer");
-
-        let command_buffer = vulkano::command_buffer::AutoCommandBufferBuilder::primary_one_time_submit(self.vk.logical_dev.clone(), 
-                self.vk.queue.family()).unwrap()
-            .begin_render_pass(
-                framebuffers.as_ref().unwrap()[image_num].clone(), false,
-                vec![
-                    [0.0, 0.0, 0.0, 1.0].into(),
-                    1f32.into()
-                ]).unwrap()
-            .draw(
-                self.vk.pipeline.clone(),
-                &self.dynamic_state,
-
-                // self.vk.vertex_buffer.clone(), 
-                vec![vertex_buffer],
-
-                set.clone(), ()).unwrap()
-            .end_render_pass().unwrap()
-            .build().unwrap();
-        
-        let future = self.previous_frame.join(acquire_future)
-            .then_execute(self.vk.queue.clone(), command_buffer).unwrap()
-            .then_swapchain_present(self.vk.queue.clone(), self.vk.swapchain.clone(), image_num)
-            .then_signal_fence_and_flush();
-
-        match future {
-            Ok(future) => {
-                self.previous_frame = Box::new(future) as Box<_>;
-            }
-            Err(vulkano::sync::FlushError::OutOfDate) => {
-                self.recreate_swapchain = true;
-                self.previous_frame = Box::new(vulkano::sync::now(self.vk.logical_dev.clone())) as Box<_>;
-            }
-            Err(e) => {
-                println!("{:?}", e);
-                self.previous_frame = Box::new(vulkano::sync::now(self.vk.logical_dev.clone())) as Box<_>;
-            }
-        }
-
-        let mut done = false;
-        self.win.events_loop.poll_events(|ev| {
-            match ev {
-                winit::Event::WindowEvent { event: winit::WindowEvent::CloseRequested, .. } => done = true,
-                _ => ()
-            }
-        });
-        if done { return; }
+        // if done { return; }
+        self
     }
 
 }
